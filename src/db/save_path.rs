@@ -1,10 +1,10 @@
 //! Tools for modifying torrent save path
 
+use crate::common::database::PathData;
 use crate::common::fastresume::Fastresume;
 use crate::config::Config;
-use crate::db::db_structs::FetchedPathData;
+use crate::db::query;
 use rusqlite::{named_params, Connection};
-use serde_rusqlite::from_rows;
 use std::error::Error;
 
 /// Fastresume save path information
@@ -32,6 +32,7 @@ pub struct SavePath {
 /// ## Example
 /// ```rs
 /// use qbfrt::db::save_path::{change_save_path, SavePath};
+/// let config = Config { verbose: true };
 /// let save_path = SavePath {
 ///     old_unix: String::from("/old/save/path"),
 ///     new_unix: String::from("/new/test/dir"),
@@ -39,7 +40,7 @@ pub struct SavePath {
 ///     new: String::from("\\new\\test\\dir"),
 ///     separator: '\\'.to_string(),
 /// };
-/// change_save_path(&connection, save_path, false);
+/// change_save_path(&connection, save_path, config);
 /// ```
 ///
 /// ## Verbose output
@@ -54,8 +55,9 @@ pub struct SavePath {
 /// > libtorrent_resume_data save path. It should be the same as the target_save_path field.
 ///
 /// ### The target_save_path changed but libtorrent_resume_data did not
-/// > Restore the old database and re-run the command with verbose output enabled. Make sure that
-/// > the target_save_path and libtorrent_resume_data have the exact same path separators for the new
+/// > Check if your torrent is in Automatic Torrent Management mode (AutoTMM), because in that case the target_save_path column will be null.
+/// > Restore the old database and re-run the command with verbose output enabled. Make sure that.
+/// > the target_save_path and libtorrent_resume_data have the exact same path separators for the new.
 /// > string. If they are different, you likely used the incorrect path separators in the old string.
 pub fn change_save_path(
     db: &Connection,
@@ -67,74 +69,85 @@ pub fn change_save_path(
         save_path.old, save_path.new
     );
 
-    let search_query = format!(
-        "SELECT id, torrent_id, target_save_path, libtorrent_resume_data 
-            FROM torrents 
-            WHERE target_save_path LIKE '%{0}%'",
-        &save_path.old_unix
-    );
-    let mut search_stmt = db.prepare(&search_query)?;
-    let relevant_rows = from_rows::<FetchedPathData>(search_stmt.query([])?);
+    let all_torrents = query::fetch_all_torrents::<PathData>(
+        db,
+        "
+        SELECT id, torrent_id, target_save_path, libtorrent_resume_data 
+        FROM torrents
+        ",
+    )?;
 
-    let mut num_updated = 0;
-    for row in relevant_rows {
-        let torrent = row?;
+    let mut num_torrents_updated = 0;
+    for torrent in all_torrents {
+        let mut trigger_update = false;
+        let bencoded_resume_data = torrent.libtorrent_resume_data.as_slice();
+        let mut resume_data: Fastresume = serde_bencode::from_bytes(bencoded_resume_data)?;
+        let resume_data_save_path = String::from_utf8(resume_data.save_path)?;
 
-        // qB always stores the "target_save_path" with Unix-style separators, even on Windows
-        let target_save_path = torrent
-            .target_save_path
-            .unwrap()
-            .replace(&save_path.old_unix, &save_path.new_unix);
+        // libtorrent save path is the source of truth since it will always be defined
+        if resume_data_save_path.contains(&save_path.old) {
+            trigger_update = true;
+        }
 
-        let bencoded_data = torrent.libtorrent_resume_data.as_slice();
-        let mut libtorrent_resume_data: Fastresume = serde_bencode::from_bytes(bencoded_data)?;
+        // qB stores the "target_save_path" with Unix-style separators, even on Windows
+        // This field will be absent if the torrent is in AutoTMM mode
+        let mut target_save_path: Option<String> = None;
+        if torrent.target_save_path.is_some() {
+            target_save_path = Some(
+                torrent
+                    .target_save_path
+                    .unwrap()
+                    .replace(&save_path.old_unix, &save_path.new_unix),
+            );
+        }
 
         // In the libtorrent data, qB uses OS-specific separators. It is up to the end user to make
         // sure their path strings use the appropriate separator for matching. However, we do allow
         // conversion to and from Windows- and Unix-style separators after the replacement.
         if save_path.separator == *"\\" {
-            libtorrent_resume_data.save_path = String::from_utf8(libtorrent_resume_data.save_path)
-                .unwrap()
+            resume_data.save_path = resume_data_save_path
                 .replace(&save_path.old, &save_path.new)
                 .replace('/', &save_path.separator)
                 .into();
         } else {
-            libtorrent_resume_data.save_path = String::from_utf8(libtorrent_resume_data.save_path)
-                .unwrap()
+            resume_data.save_path = resume_data_save_path
                 .replace(&save_path.old, &save_path.new)
                 .replace('\\', &save_path.separator)
                 .into();
         }
 
-        let mut update_stmt = db.prepare(
-            "UPDATE torrents
+        if trigger_update {
+            let mut update_stmt = db.prepare(
+                "
+                UPDATE torrents
                 SET target_save_path = :tsp, libtorrent_resume_data = :lrd
                 WHERE id = :id
-                RETURNING torrent_id;",
-        )?;
-        update_stmt
-                .query_row(
-                    named_params! {":tsp": target_save_path, ":lrd": serde_bencode::to_bytes(&libtorrent_resume_data)?, ":id": torrent.id},
-                    |row| {
-                        let updated_row_id = row.get::<usize, String>(0)?;
+                RETURNING torrent_id;
+                ",
+            )?;
+            update_stmt.query_row(
+                named_params! {":tsp": target_save_path, ":lrd": serde_bencode::to_bytes(&resume_data)?, ":id": torrent.id},
+                |row| {
+                    let updated_row_id = row.get::<usize, String>(0)?;
 
-                        if config.verbose {
-                            println!("Save path: updated save path for {}", updated_row_id);
-                            println!("{}: new target_save_path is '{}'", updated_row_id, target_save_path);
-                            println!("{}: new libtorrent_resume_data path is {:?}", updated_row_id, String::from_utf8(libtorrent_resume_data.save_path).unwrap());
-                        }
+                    if config.verbose {
+                        println!("Save path: updated save path for {}", updated_row_id);
+                        println!("{}: new target_save_path is '{:?}'", updated_row_id, target_save_path);
+                        println!("{}: new libtorrent_resume_data path is {:?}", updated_row_id, String::from_utf8(resume_data.save_path).unwrap());
+                    }
 
-                        num_updated += 1;
+                    num_torrents_updated +=1;
 
-                        Ok(())
-                    },
-                )?;
+                    Ok(())
+                }
+            )?;
+        }
     }
 
-    match num_updated {
+    match num_torrents_updated {
         0 => println!("Save path: no torrents were updated"),
         1 => println!("Save path: 1 torrent was updated"),
-        _ => println!("Save path: {} torrents were updated", num_updated),
+        _ => println!("Save path: {} torrents were updated", num_torrents_updated),
     }
 
     Ok(())

@@ -1,8 +1,8 @@
 //! Tools for dumping the SQLite database to fastresume files
 
+use crate::common::database::DatabaseRow;
 use crate::common::fastresume::Fastresume;
 use crate::config::Config;
-use crate::db::db_structs::DatabaseData;
 use rusqlite::Connection;
 use serde_rusqlite::from_rows;
 use std::error::Error;
@@ -17,7 +17,8 @@ use std::path::Path;
 /// ## Example
 /// ```rs
 /// use qbfrt::db::dump_fastresume;
-/// dump_fastresume::dump(&connection, false);
+/// let config = Config { verbose: true };
+/// dump_fastresume::dump(&connection, config);
 /// ```
 ///
 /// ## Configuration
@@ -42,7 +43,7 @@ pub fn to_fastresume(db: &Connection, config: &Config) -> Result<(), Box<dyn Err
     }
 
     let mut search_stmt = db.prepare("SELECT * FROM torrents")?;
-    let all_torrents = from_rows::<DatabaseData>(search_stmt.query([])?);
+    let all_torrents = from_rows::<DatabaseRow>(search_stmt.query([])?);
 
     for torrent in all_torrents {
         let torrent = match torrent {

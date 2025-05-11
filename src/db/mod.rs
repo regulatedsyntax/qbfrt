@@ -24,8 +24,8 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-pub mod db_structs;
 pub mod dump_db;
+pub mod query;
 pub mod save_path;
 pub mod tracker_url;
 

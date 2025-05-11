@@ -1,25 +1,25 @@
-//! Structs for qBittorrent SQLite data
+//! SQLite file data structures
 
 use serde_derive::{Deserialize, Serialize};
 
-/// qB SQLite data
+/// qB SQLite database row data
 ///
-/// Each field here corresponds to a column in the "torrents" table in the SQLite database.
+/// Each field corresponds to a column in the "torrents" database table
 #[derive(Serialize, Deserialize, Debug)]
-pub struct DatabaseData {
-    /// Torrent database row id
-    pub id: u64,
-    /// Torrent hash id
+pub struct DatabaseRow {
+    id: u64,
+    /// Torrent hash
     pub torrent_id: String,
-    /// Queue position for torrent
-    pub queue_position: i64,
+    queue_position: i64,
     /// Torrent name, only used on re-named torrents
     pub name: Option<String>,
     /// Torrent category
     pub category: Option<String>,
-    /// Comma-separated torrent tags
+    /// Comma-separated list of tags
     pub tags: Option<String>,
     /// Save path for torrent content
+    ///
+    /// This is absent if the torrent is in 'AutoTMM' mode
     pub target_save_path: Option<String>,
     /// Download path, used for incomplete download directory
     pub download_path: Option<String>,
@@ -37,10 +37,8 @@ pub struct DatabaseData {
     pub has_outer_pieces_priority: i64,
     /// Torrent is seeding
     pub has_seed_status: i64,
-    /// Torrent management mode
-    pub operating_mode: String,
-    /// Torrent is stopped
-    pub stopped: i64,
+    operating_mode: String,
+    stopped: i64,
     /// Stop condition for torrents
     pub stop_condition: String,
     /// Binary blob containing libtorrent fastresume data
@@ -51,12 +49,12 @@ pub struct DatabaseData {
     pub metadata: Vec<u8>,
 }
 
-/// A subset of database columns needed for save path operations
+/// A subset of data for save path operations
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FetchedPathData {
-    /// Torrent database row id
+pub struct PathData {
+    /// Torrent database id
     pub id: u64,
-    /// Torrent hash id
+    /// Torrent hash
     pub torrent_id: String,
     /// Save path for torrent content
     pub target_save_path: Option<String>,
@@ -64,9 +62,9 @@ pub struct FetchedPathData {
     pub libtorrent_resume_data: Vec<u8>,
 }
 
-/// A subset of database columns needed for libtorrent_resume_data operations
+/// A subset of data for operations on libtorrent_resume_data
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FetchedLibtorrentResumeData {
+pub struct LibtorrentResumeData {
     /// Torrent database row id
     pub id: u64,
     /// Torrent hash id

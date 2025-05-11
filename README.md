@@ -77,6 +77,19 @@ will still use Windows "\\" path separators. Note you would have to escape the b
 ```bash
 qbfrt -v --old-path "D:\\Downloads" --new-path "C:\\" --use-win-sep
 ```
+### Deleting a directory level in the save path
+Here the torrent is saved at `~/torrents/some/old/path/here`. Running the following command
+will result in the save path becoming `~/torrents/old/path/here`. Note: the trick is to flank
+the old path with separators.
+```bash
+qbfrt -v --old-path "/some/" --new-path "/"
+```
+### Migrating save path from Windows to Unix
+Here the torrent is saved at `D:\Downloads\torrents\some\old\path\here`. Running the following
+command will result in the save path becoming `/torrents/some/old/path/here`.
+```bash
+qbfrt -v --old-path "D:\\Downloads\\" --new-path "/" --use-unix-sep
+```
 ### Updating tracker URL
 Here the torrent has the following trackers: 
 - `http://some.tracker:6969/tracker`
@@ -123,7 +136,7 @@ Until I figure out how to compile cross-platform, you're going to have to do it 
 ### 1. [Install Rust](https://www.rust-lang.org/tools/install)
 ### 2. Clone the git repo:
 ```bash
-git clone https://github.com/strangeepoxy/qbfrt.git
+git clone https://github.com/regulatedsyntax/qbfrt.git
 ```
 ### 3. Compile the app:
 ```bash
