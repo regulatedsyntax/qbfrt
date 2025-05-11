@@ -1,0 +1,25 @@
+[package]
+name = "qbfrt"
+description = "Command line tool for working with qBittorrent's fastresume data"
+keywords = ["qbittorrent", "fastresume", "torrent", "sqlite"]
+categories = ["command-line-utilities"]
+version = "0.3.0"
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/regulatedsyntax/qbfrt"
+repository = "https://github.com/regulatedsyntax/qbfrt"
+
+[dependencies]
+argh = "0.1.12"
+chrono = "0.4.38"
+directories = "5.0.1"
+figlet-rs = "0.1.5"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+serde = "1.0.201"
+serde_bencode = "0.2.4"
+serde_bytes = "0.11.14"
+serde_derive = "1.0.201"
+serde_rusqlite = "0.35.0"
+
+[package.metadata.cargo-machete]
+ignored = ["serde", "serde_bytes"]
