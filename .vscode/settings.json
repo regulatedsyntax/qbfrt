@@ -1,0 +1,27 @@
+{
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    },
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "cSpell.words": [
+        "appdata",
+        "argh",
+        "bencode",
+        "bencoded",
+        "bitmask",
+        "chrono",
+        "datetime",
+        "fastresume",
+        "figlet",
+        "httpseed",
+        "httpseeds",
+        "libtorrent",
+        "localappdata",
+        "qbfrt",
+        "qbit",
+        "qbittorrent",
+        "rusqlite",
+        "serde"
+    ],
+}
