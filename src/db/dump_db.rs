@@ -88,10 +88,8 @@ pub fn to_fastresume(db: &Connection, config: &Config) -> Result<(), Box<dyn Err
 
         let new_resume_data = serde_bencode::to_bytes(&resume_data)?;
 
-        let fastresume_file_name = format!("{}.fastresume", torrent.torrent_id);
-        let fastresume_file = dir_path.join(fastresume_file_name);
-        let torrent_file_name = format!("{}.torrent", torrent.torrent_id);
-        let torrent_file = dir_path.join(torrent_file_name);
+        let fastresume_file = dir_path.join(format!("{}.fastresume", torrent.torrent_id));
+        let torrent_file = dir_path.join(format!("{}.torrent", torrent.torrent_id));
         fs::write(fastresume_file, new_resume_data)?;
         fs::write(torrent_file, torrent.metadata.as_slice())?;
 

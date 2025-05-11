@@ -20,8 +20,7 @@ pub struct Fastresume {
     disable_lsd: u8,
     disable_pex: u8,
     download_rate_limit: i32,
-    #[serde(rename = "file-format")]
-    #[serde(with = "serde_bytes")]
+    #[serde(with = "serde_bytes", rename = "file-format")]
     file_format: Vec<u8>,
     #[serde(rename = "file-version")]
     file_version: u8,
@@ -29,18 +28,16 @@ pub struct Fastresume {
     finished_time: i64,
     httpseeds: Option<Vec<String>>,
     i2p: Option<u8>,
-    #[serde(rename = "info-hash")]
-    #[serde(with = "serde_bytes")]
+    #[serde(with = "serde_bytes", rename = "info-hash")]
     info_hash: Vec<u8>,
-    #[serde(rename = "info-hash2")]
-    #[serde(default, with = "serde_bytes")]
+    #[serde(default, with = "serde_bytes", rename = "info-hash2")]
     info_hash2: Option<Vec<u8>>,
     last_download: i64,
     last_seen_complete: i64,
     last_upload: i64,
-    #[serde(rename = "libtorrent-version")]
-    #[serde(with = "serde_bytes")]
+    #[serde(with = "serde_bytes", rename = "libtorrent-version")]
     libtorrent_version: Vec<u8>,
+    mapped_files: Option<Vec<String>>,
     max_connections: i64,
     max_uploads: i64,
     #[serde(default, with = "serde_bytes")]
@@ -58,12 +55,10 @@ pub struct Fastresume {
     #[serde(with = "serde_bytes")]
     pieces: Vec<u8>,
     /// Torrent category
-    #[serde(rename = "qBt-category")]
-    #[serde(default, with = "serde_bytes")]
+    #[serde(default, with = "serde_bytes", rename = "qBt-category")]
     pub qbt_category: Option<Vec<u8>>,
     /// Content layout mode for torrent
-    #[serde(rename = "qBt-contentLayout")]
-    #[serde(default, with = "serde_bytes")]
+    #[serde(default, with = "serde_bytes", rename = "qBt-contentLayout")]
     pub qbt_content_layout: Option<Vec<u8>>,
     /// Download path for torrent
     #[serde(rename = "qBt-downloadPath")]
